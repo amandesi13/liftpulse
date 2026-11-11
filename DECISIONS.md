@@ -59,3 +59,36 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
   traces with known answers: jerk-limited S-curve motion, speed-dependent
   car vibration, post-stop bounce, and a phone model with random orientation,
   noise, bias, irregular timing and both sign conventions.
+
+## Scoring and alerts (`app/scoring.py`)
+
+- **Weights and thresholds in one place:** `SCORE_WEIGHTS` and the constants
+  at the top of `scoring.py`. A ride starts at 100; each feature costs
+  `weight × 2 × (z − 2)` points for z between 2 and 8 (z ≤ 2 is normal
+  variation and free; values below baseline never cost points). Calibrated
+  on synthetic rides: healthy lifts score 96–100, +45 % stop jerk ≈ 64
+  (yellow), a badly worn lift ≈ 0 (red).
+- **Minimum spread per feature** (`MIN_SPREAD`, and ≥ 3 % of the median).
+  Without it, a feature with a near-constant baseline (settling is often
+  exactly 0 s) would turn any change into an enormous z-score.
+- **Baseline completion rescoring:** a ride gets a score only once its
+  direction has 20 valid rides. When the 20th arrives, the 20 baseline
+  rides are scored too, so the history has no gap.
+- **Trend alerts need significance as well as size.** "+25 % vs baseline"
+  alone fired on healthy lifts for features with tiny baselines (+39 % of
+  0.05 s settling is noise). A trend now also needs the fitted value to be
+  more than 2 robust spreads above baseline. Up and down rides are pooled by
+  normalising each by its own direction's baseline.
+- **Severity:** warn for a trend > 25 % or 5 of the last 10 rides at z > 3;
+  critical only for a trend > 60 % (or 8 outliers when no trend fit is
+  possible). Tight features like jerk put every slightly worse ride above
+  z = 3, so the outlier rule alone should not jump straight to critical.
+- **One open alert per lift and feature**, updated in place as the trend
+  grows; it resolves itself when the condition clears. An alert resolved by
+  maintenance is not re-raised for 24 h unless it gets more severe.
+- **Resident reports:** with open sensor alerts, a report raises them one
+  level and notes it in the message; without them, it creates an info alert
+  so the report shows in the feed.
+- **Lift health** uses the ride time as "now" while history is being
+  backfilled, so a seeded dataset gets alerts dated when they would have
+  appeared.

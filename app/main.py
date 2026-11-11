@@ -95,6 +95,26 @@ def _get_lift(db: Session, lift_id: str) -> models.Lift:
     return lift
 
 
+def iso(dt):
+    """Naive-UTC datetime as ISO 8601 with a Z suffix."""
+    return None if dt is None else dt.isoformat(timespec="seconds") + "Z"
+
+
+def _alert_json(alert: models.Alert, lift: models.Lift | None) -> dict:
+    return {
+        "id": alert.id,
+        "lift_id": alert.lift_id,
+        "lift_name": lift.name if lift else alert.lift_id,
+        "created_at": iso(alert.created_at),
+        "updated_at": iso(alert.updated_at),
+        "severity": alert.severity,
+        "feature": alert.feature,
+        "message": alert.message,
+        "resolved": alert.resolved,
+        "resolved_at": iso(alert.resolved_at),
+    }
+
+
 def _page(name: str) -> FileResponse:
     return FileResponse(STATIC_DIR / name, headers={"Cache-Control": "no-cache"})
 
@@ -147,6 +167,35 @@ def _register_routes(app: FastAPI) -> None:
         lift = _get_lift(db, body.lift_id)
         report = pipeline.add_report(db, lift, body.category, body.comment, models.utcnow())
         return {"id": report.id, "lift_id": lift.id, "category": report.category}
+
+    # ---- alerts (dashboard)
+
+    @app.get("/api/alerts", dependencies=[Depends(require_admin)])
+    def list_alerts(include_resolved: bool = False, limit: int = Query(default=100, le=1000),
+                    db: Session = Depends(get_db)) -> list[dict]:
+        stmt = select(models.Alert, models.Lift).join(models.Lift, models.Alert.lift_id == models.Lift.id)
+        if not include_resolved:
+            stmt = stmt.where(models.Alert.resolved.is_(False))
+        stmt = stmt.order_by(models.Alert.updated_at.desc()).limit(limit)
+        return [_alert_json(a, lift) for a, lift in db.execute(stmt).all()]
+
+    @app.post("/api/alerts/{alert_id}/resolve", dependencies=[Depends(require_admin)])
+    def resolve_alert(alert_id: int, db: Session = Depends(get_db)) -> dict:
+        alert = db.get(models.Alert, alert_id)
+        if alert is None:
+            raise HTTPException(404, "alert not found")
+        if not alert.resolved:
+            now = models.utcnow()
+            alert.resolved, alert.resolved_at, alert.updated_at = True, now, now
+            db.commit()
+        return _alert_json(alert, db.get(models.Lift, alert.lift_id))
+
+    @app.post("/api/admin/recompute", dependencies=[Depends(require_admin)])
+    def recompute(request: Request, lift_id: str | None = None, db: Session = Depends(get_db)) -> dict:
+        lifts = [_get_lift(db, lift_id)] if lift_id else list(db.scalars(select(models.Lift)))
+        settings, now = request.app.state.settings, models.utcnow()
+        scored = {lift.id: pipeline.recompute_lift(db, lift, settings, now) for lift in lifts}
+        return {"rescored_rides": scored}
 
     # ---- admin: buildings and lifts
 
