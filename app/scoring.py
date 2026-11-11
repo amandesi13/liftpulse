@@ -60,7 +60,6 @@ TREND_CRITICAL_INCREASE = 0.60
 OUTLIER_Z = 3.0
 OUTLIER_LAST_N = 10
 OUTLIER_WARN_COUNT = 5
-OUTLIER_CRITICAL_COUNT = 8
 
 SEVERITIES = ("info", "warn", "critical")
 
@@ -206,8 +205,9 @@ def detect_trends(rides: Sequence[RidePoint], baselines_by_direction: dict[str, 
         than TREND_MIN_Z robust spreads above it. The second condition keeps
         features with a near-zero baseline (e.g. settling time) from alerting
         on percentages that are only noise;
-      - outliers: at least 5 of the last 10 rides have z > 3 (a warning; a
-        critical alert needs the trend as well, or 8 outliers without one).
+      - outliers: at least 5 of the last 10 rides have z > 3. This alone is a
+        warning: tight features (jerk) put even a mildly worse ride above
+        z = 3, so "critical" needs the size of the trend as well.
     """
     window = [r for r in rides if now - TREND_WINDOW <= r.started_at <= now]
     findings: list[TrendFinding] = []
@@ -232,7 +232,7 @@ def detect_trends(rides: Sequence[RidePoint], baselines_by_direction: dict[str, 
         trending = increase is not None and increase > TREND_WARN_INCREASE
 
         severity = None
-        if (trending and increase > TREND_CRITICAL_INCREASE) or (not trending and outliers >= OUTLIER_CRITICAL_COUNT):
+        if trending and increase > TREND_CRITICAL_INCREASE:
             severity = "critical"
         elif trending or outliers >= OUTLIER_WARN_COUNT:
             severity = "warn"
