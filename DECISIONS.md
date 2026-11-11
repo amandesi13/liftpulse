@@ -92,3 +92,21 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
 - **Lift health** uses the ride time as "now" while history is being
   backfilled, so a seeded dataset gets alerts dated when they would have
   appeared.
+
+## Dashboard (`app/views.py`, `static/`)
+
+- **Read models in `views.py`**, so the dashboard's queries and the shapes
+  the pages need are in one module and the routes stay one-liners.
+- **Feature charts in real units** (m/s², m/s³, s) with the baseline band
+  (median ± 2 robust spreads, pooled over both directions) rather than "%
+  of baseline": percentages are meaningless for features whose baseline is
+  near zero (settling time).
+- **Trend arrow** compares the health score now with 7 days ago (±5 points).
+- **Health history** is recomputed per day from ride scores on request. Fine
+  for tens of lifts; a daily snapshot table would be the next step at scale.
+- **No build step, no framework:** vanilla JS with a 10-line `el()` helper;
+  Chart.js 4.4.1 from jsDelivr for the lift page. The admin token is taken
+  from `?token=` once (then removed from the URL) or asked for, and kept in
+  sessionStorage with an in-memory fallback.
+- **Auto-refresh every 5 s** on the dashboard, so simulator live mode shows
+  up during a pitch without touching the laptop.

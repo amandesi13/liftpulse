@@ -1,3 +1,45 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LiftPulse admin</title></head>
-<body><h1>LiftPulse admin</h1><p>Use the API at <a href="/docs">/docs</a> to create buildings and lifts.</p></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiftPulse admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="console">
+  <header class="topbar no-print">
+    <a class="brand" href="/dashboard"><span class="brand-mark">◆</span> LiftPulse</a>
+    <nav><a href="/dashboard">Lifts</a><a href="/admin" class="active">Admin</a></nav>
+    <span class="updated" id="msg"></span>
+  </header>
+  <main class="console-main">
+    <div class="two-col no-print">
+      <form class="card form" id="building-form">
+        <h2 class="section-title">New building</h2>
+        <label>Name <input name="name" required maxlength="120" placeholder="Riverside House"></label>
+        <label>Address <input name="address" maxlength="240" placeholder="12 River Road"></label>
+        <button class="btn" type="submit">Create building</button>
+      </form>
+      <form class="card form" id="lift-form">
+        <h2 class="section-title">New lift</h2>
+        <label>Building <select name="building_id" id="building-select" required></select></label>
+        <label>Name <input name="name" required maxlength="120" placeholder="Lift A"></label>
+        <div class="row">
+          <label>Floors <input name="floors" type="number" min="2" max="200" value="8" required></label>
+          <label>Storey height (m) <input name="floor_height_m" type="number" step="0.1" min="1.6" max="9.9" value="2.8" required></label>
+        </div>
+        <button class="btn" type="submit">Create lift</button>
+      </form>
+    </div>
+
+    <div class="section-head no-print">
+      <h2 class="section-title">QR stickers</h2>
+      <button class="btn" type="button" onclick="window.print()">Print stickers</button>
+    </div>
+    <p class="muted no-print">Stick one inside each lift car. The QR opens the ride page for that lift.</p>
+    <section class="stickers" id="stickers"></section>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

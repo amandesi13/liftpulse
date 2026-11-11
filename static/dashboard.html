@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LiftPulse dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="console">
+  <header class="topbar">
+    <a class="brand" href="/dashboard"><span class="brand-mark">◆</span> LiftPulse</a>
+    <nav><a href="/dashboard" class="active">Lifts</a><a href="/admin">Admin</a></nav>
+    <span class="updated" id="updated"></span>
+  </header>
+  <main class="console-main">
+    <section class="tiles" id="tiles"></section>
+    <div class="dash-grid">
+      <section>
+        <h2 class="section-title">Lifts</h2>
+        <div class="lift-cards" id="lifts"><p class="muted">Loading…</p></div>
+      </section>
+      <section>
+        <h2 class="section-title">Open alerts</h2>
+        <div class="alert-feed" id="alerts"></div>
+      </section>
+    </div>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

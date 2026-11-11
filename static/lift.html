@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lift detail: LiftPulse</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="console">
+  <header class="topbar">
+    <a class="brand" href="/dashboard"><span class="brand-mark">◆</span> LiftPulse</a>
+    <nav><a href="/dashboard">Lifts</a><a href="/admin">Admin</a></nav>
+    <span class="updated" id="updated"></span>
+  </header>
+  <main class="console-main">
+    <a class="back" href="/dashboard">← All lifts</a>
+    <section class="lift-hero card">
+      <div>
+        <p class="eyebrow" id="building"></p>
+        <h1 id="name">Loading…</h1>
+        <p id="sentence" class="muted"></p>
+        <p id="meta" class="muted small"></p>
+      </div>
+      <div class="hero-score">
+        <div id="pill"></div>
+        <div class="score"><span class="score-value" id="score">–</span><span class="score-unit">/100</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Alerts</h2>
+      <div class="alert-feed" id="alerts"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Health score</h2>
+      <div class="chart-box"><canvas id="health-chart"></canvas></div>
+    </section>
+
+    <h2 class="section-title">Ride quality vs baseline</h2>
+    <p class="muted small">Dots are single rides, the line is the daily median, the shaded band is the lift's
+      normal range (baseline median ± 2 robust spreads).</p>
+    <section class="feature-grid" id="features"></section>
+
+    <section class="card">
+      <h2 class="section-title" id="trace-title">Latest ride</h2>
+      <p class="muted small" id="trace-meta"></p>
+      <div class="chart-box tall"><canvas id="trace-chart"></canvas></div>
+    </section>
+
+    <div class="two-col">
+      <section class="card">
+        <h2 class="section-title">Recent rides</h2>
+        <table class="rides"><thead><tr><th>When</th><th>Ride</th><th>Score</th></tr></thead>
+          <tbody id="rides"></tbody></table>
+      </section>
+      <section class="card">
+        <h2 class="section-title">Resident reports</h2>
+        <ul class="reports" id="reports"></ul>
+      </section>
+    </div>
+  </main>
+  <script src="/static/common.js"></script>
+  <script src="/static/lift.js"></script>
+</body>
+</html>

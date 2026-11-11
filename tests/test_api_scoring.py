@@ -5,39 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
-import pytest
-from fastapi.testclient import TestClient
 
-from app.config import Settings
-from app.main import create_app
 from sim.ridegen import LiftProfile, generate_ride
 
-from .conftest import ADMIN, ADMIN_TOKEN
-
-BASELINE = 6
-
-
-@pytest.fixture()
-def small(tmp_path):
-    """App with a 6-ride baseline so the tests stay fast, and one lift."""
-    settings = Settings(database_url=f"sqlite:///{tmp_path / 's.db'}", admin_token=ADMIN_TOKEN,
-                        baseline_rides=BASELINE, store_raw_samples=False)
-    with TestClient(create_app(settings)) as c:
-        b = c.post("/api/admin/buildings", json={"name": "B"}, headers=ADMIN).json()
-        c.post("/api/admin/lifts", json={"name": "Lift 2", "building_id": b["id"], "id": "l2"}, headers=ADMIN)
-        yield c
-
-
-def post_rides(client, n, start, lift=None, seed=0, hours=4.0):
-    rng = np.random.default_rng(seed)
-    last = None
-    for i in range(n):
-        samples, _ = generate_ride(int(rng.integers(2, 7)), "up" if i % 2 else "down", lift=lift, rng=rng)
-        t = start + timedelta(hours=hours * i)
-        last = client.post("/api/rides", headers=ADMIN, json={
-            "lift_id": "l2", "samples": samples, "started_at": t.isoformat()}).json()
-    return last
-
+from .conftest import ADMIN, BASELINE, post_rides
 
 def test_grey_until_baseline_then_green(small):
     start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=3)

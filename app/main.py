@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import models, pipeline
+from . import models, pipeline, views
 from .config import DEFAULT_ADMIN_TOKEN, Settings, load_settings
 from .db import Base, get_db, make_engine, make_session_factory
 from .schemas import BuildingIn, LiftIn, LiftStatusOut, ReportIn, RideIn, RideOut
@@ -95,24 +95,8 @@ def _get_lift(db: Session, lift_id: str) -> models.Lift:
     return lift
 
 
-def iso(dt):
-    """Naive-UTC datetime as ISO 8601 with a Z suffix."""
-    return None if dt is None else dt.isoformat(timespec="seconds") + "Z"
-
-
 def _alert_json(alert: models.Alert, lift: models.Lift | None) -> dict:
-    return {
-        "id": alert.id,
-        "lift_id": alert.lift_id,
-        "lift_name": lift.name if lift else alert.lift_id,
-        "created_at": iso(alert.created_at),
-        "updated_at": iso(alert.updated_at),
-        "severity": alert.severity,
-        "feature": alert.feature,
-        "message": alert.message,
-        "resolved": alert.resolved,
-        "resolved_at": iso(alert.resolved_at),
-    }
+    return views.alert_json(alert, lift.name if lift else alert.lift_id)
 
 
 def _page(name: str) -> FileResponse:
@@ -134,6 +118,14 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/admin", include_in_schema=False)
     def admin_page() -> FileResponse:
         return _page("admin.html")
+
+    @app.get("/dashboard", include_in_schema=False)
+    def dashboard_page() -> FileResponse:
+        return _page("dashboard.html")
+
+    @app.get("/lifts/{lift_id}", include_in_schema=False)
+    def lift_page(lift_id: str) -> FileResponse:
+        return _page("lift.html")
 
     @app.get("/r/{lift_id}", include_in_schema=False)
     def ride_page(lift_id: str) -> FileResponse:
@@ -168,7 +160,32 @@ def _register_routes(app: FastAPI) -> None:
         report = pipeline.add_report(db, lift, body.category, body.comment, models.utcnow())
         return {"id": report.id, "lift_id": lift.id, "category": report.category}
 
-    # ---- alerts (dashboard)
+    # ---- dashboard
+
+    @app.get("/api/lifts", dependencies=[Depends(require_admin)])
+    def list_lifts(db: Session = Depends(get_db)) -> list[dict]:
+        return views.lift_overview(db, models.utcnow())
+
+    @app.get("/api/lifts/{lift_id}", dependencies=[Depends(require_admin)])
+    def lift_detail(lift_id: str, request: Request, db: Session = Depends(get_db)) -> dict:
+        return views.lift_detail(db, _get_lift(db, lift_id), request.app.state.settings, models.utcnow())
+
+    @app.get("/api/lifts/{lift_id}/rides", dependencies=[Depends(require_admin)])
+    def lift_rides(lift_id: str, limit: int = Query(default=50, ge=1, le=1000),
+                   db: Session = Depends(get_db)) -> list[dict]:
+        _get_lift(db, lift_id)
+        rides = db.scalars(select(models.Ride).where(models.Ride.lift_id == lift_id)
+                           .order_by(models.Ride.started_at.desc()).limit(limit))
+        return [views.ride_row(r) for r in rides]
+
+    @app.get("/api/rides/{ride_id}", dependencies=[Depends(require_admin)])
+    def ride_detail(ride_id: int, db: Session = Depends(get_db)) -> dict:
+        ride = db.get(models.Ride, ride_id)
+        if ride is None:
+            raise HTTPException(404, "ride not found")
+        return views.ride_detail(ride, db.get(models.Lift, ride.lift_id))
+
+    # ---- alerts
 
     @app.get("/api/alerts", dependencies=[Depends(require_admin)])
     def list_alerts(include_resolved: bool = False, limit: int = Query(default=100, le=1000),
