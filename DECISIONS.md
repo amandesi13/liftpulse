@@ -26,9 +26,13 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
   server, so the algorithm can change without touching phones and old rides
   can be re-analysed. The functions are pure NumPy, so they could later run
   on-device (e.g. Pyodide/WASM, or a port) to upload features only.
-- **Gravity from the stillest 0.5 s within the first 2 s**, not the first
-  0.5 s: the tap on "Start" shakes the phone. If even the stillest window
-  varies by more than 0.25 m/s², the ride is rejected (`not_still_at_start`).
+- **Gravity from the first still 0.5 s within the first 2 s** (|a| varying
+  < 0.05 m/s²), not simply the first 0.5 s (the tap on "Start" shakes the
+  phone) and not the stillest window: during a fast lift's constant-
+  acceleration phase |a| is just as steady, and using that as "rest" made
+  13 of 600 genuine rides look motionless. If no window is still enough
+  and even the stillest varies by more than 0.25 m/s², the ride is rejected
+  (`not_still_at_start`). After the fix: 0 of 800 genuine rides rejected.
 - **Orientation- and sign-independent.** Vertical acceleration is the
   projection onto the measured gravity direction minus |g|. Old iOS reports
   `accelerationIncludingGravity` with the opposite sign; the projection is
@@ -80,9 +84,10 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
   more than 2 robust spreads above baseline. Up and down rides are pooled by
   normalising each by its own direction's baseline.
 - **Severity:** warn for a trend > 25 % or 5 of the last 10 rides at z > 3;
-  critical only for a trend > 60 % (or 8 outliers when no trend fit is
-  possible). Tight features like jerk put every slightly worse ride above
-  z = 3, so the outlier rule alone should not jump straight to critical.
+  critical only for a trend > 60 %. Tight features like jerk put every
+  slightly worse ride above z = 3, so outliers alone stay a warning; an
+  earlier "8 outliers = critical" rule made alerts flip critical → warn
+  once enough data for a trend fit arrived.
 - **One open alert per lift and feature**, updated in place as the trend
   grows; it resolves itself when the condition clears. An alert resolved by
   maintenance is not re-raised for 24 h unless it gets more severe.

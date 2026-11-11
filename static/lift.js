@@ -36,6 +36,13 @@ Chart.register(bandsPlugin);
 
 const dateTicks = { callback: (v) => new Date(v).toLocaleDateString(undefined, { day: "numeric", month: "short" }) };
 
+// x-axis limited to the data, so the axis doesn't run past today
+function timeAxis(xs) {
+  const axis = { type: "linear", ticks: dateTicks };
+  if (xs.length) { axis.min = Math.min(...xs); axis.max = Math.max(...xs); }
+  return axis;
+}
+
 function makeChart(id, config) {
   charts[id]?.destroy();
   charts[id] = new Chart(document.getElementById(id), config);
@@ -53,7 +60,7 @@ function healthChart(history) {
           { axis: "y", from: 80, to: 100, color: "rgba(21,128,61,0.10)", label: "healthy" },
           { axis: "y", from: 60, to: 80, color: "rgba(183,121,31,0.10)", label: "watch" },
           { axis: "y", from: 0, to: 60, color: "rgba(197,48,48,0.08)", label: "needs attention" }] } },
-      scales: { x: { type: "linear", ticks: dateTicks }, y: { min: 0, max: 100 } },
+      scales: { x: timeAxis(pts.map((p) => p.x)), y: { min: 0, max: 100 } },
     },
   });
 }
@@ -80,8 +87,8 @@ function featureCharts(features) {
       options: {
         maintainAspectRatio: false, animation: false,
         plugins: { legend: { labels: { boxWidth: 12 } },
-          bands: { items: band ? [{ axis: "y", from: band[0], to: band[1], color: COLORS.band, label: "normal range" }] : [] } },
-        scales: { x: { type: "linear", ticks: dateTicks }, y: { beginAtZero: true } },
+          bands: { items: band ? [{ axis: "y", from: band[0], to: band[1], color: COLORS.band }] : [] } },
+        scales: { x: timeAxis(datasets.flatMap((d) => d.data.map((p) => p.x))), y: { beginAtZero: true } },
       },
     });
   }
@@ -117,7 +124,7 @@ async function showRide(rideId) {
     options: {
       maintainAspectRatio: false, animation: false,
       plugins: { bands: { items } },
-      scales: { x: { type: "linear", title: { display: true, text: "seconds" } },
+      scales: { x: { type: "linear", min: 0, max: t.t[t.t.length - 1], title: { display: true, text: "seconds" } },
         y: { title: { display: true, text: "m/s²" } } },
     },
   });

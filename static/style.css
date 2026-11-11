@@ -19,6 +19,7 @@
 }
 
 * { box-sizing: border-box; }
+button, input, select, textarea { font-family: inherit; }
 body { margin: 0; background: var(--bg); line-height: 1.5; }
 h1, h2, h3 { line-height: 1.2; margin: 0 0 0.4em; }
 .hidden { display: none !important; }
