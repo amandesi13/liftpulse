@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from . import models
 from .config import Settings
 from .schemas import RideIn
+from .signal import FEATURE_NAMES, REJECT_MESSAGES, analyse_ride
 
 STATUS_SENTENCES = {
     "green": "{name} is running normally.",
@@ -49,8 +50,9 @@ def lift_status(db: Session, lift: models.Lift) -> dict:
 def ingest_ride(
     db: Session, settings: Settings, lift: models.Lift, body: RideIn, started_at: datetime
 ) -> dict:
-    """Store an uploaded ride and return the response for the resident."""
+    """Analyse and store an uploaded ride, and return the response for the resident."""
     samples = body.samples
+    analysis = analyse_ride(samples, floor_height_m=lift.floor_height_m)
     duration = (samples[-1][0] - samples[0][0]) / 1000.0 if len(samples) > 1 else 0.0
     ride = models.Ride(
         lift_id=lift.id,
@@ -59,18 +61,21 @@ def ingest_ride(
         duration_s=duration,
         sample_rate_hz=body.sample_rate_hint,
         raw_samples=compress_samples(samples) if settings.store_raw_samples else None,
-        valid=False,
-        reject_reason="not_analysed",
+        valid=analysis.valid,
+        reject_reason=analysis.reject_reason,
     )
+    for name in FEATURE_NAMES:
+        if name in analysis.features:
+            setattr(ride, name, analysis.features[name])
     db.add(ride)
     db.commit()
     return {
         "ride_id": ride.id,
         "valid": ride.valid,
         "reject_reason": ride.reject_reason,
-        "reject_message": "Ride stored. Analysis is not available yet.",
-        "features": {},
-        "ride_score": None,
+        "reject_message": REJECT_MESSAGES.get(ride.reject_reason) if ride.reject_reason else None,
+        "features": analysis.features,
+        "ride_score": ride.ride_score,
         "lift_status": lift_status(db, lift),
     }
 

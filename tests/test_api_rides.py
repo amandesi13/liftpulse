@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
+
+from sim.ridegen import generate_ride
+
 from .conftest import ADMIN
 
 
@@ -52,3 +56,20 @@ def test_report(client, lift):
     r = client.post("/api/reports", json={"lift_id": "test-a", "category": "noise", "comment": "squeaks"})
     assert r.status_code == 201
     assert client.post("/api/reports", json={"lift_id": "test-a", "category": "fire"}).status_code == 422
+
+
+def test_valid_ride_is_analysed(client, lift):
+    samples, truth = generate_ride(5, "down", rng=np.random.default_rng(4))
+    body = client.post("/api/rides", json={"lift_id": "test-a", "samples": samples}).json()
+    assert body["valid"] is True
+    assert body["reject_reason"] is None
+    assert body["features"]["direction"] == "down"
+    assert body["features"]["floors_travelled_est"] == 5
+
+
+def test_invalid_ride_gets_a_readable_reason(client, lift):
+    samples, _ = generate_ride(5, disturbance="handled", rng=np.random.default_rng(4))
+    body = client.post("/api/rides", json={"lift_id": "test-a", "samples": samples}).json()
+    assert body["valid"] is False
+    assert body["reject_reason"] == "phone_moved"
+    assert "moved" in body["reject_message"]
