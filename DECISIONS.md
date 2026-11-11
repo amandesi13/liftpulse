@@ -115,3 +115,28 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
   sessionStorage with an in-memory fallback.
 - **Auto-refresh every 5 s** on the dashboard, so simulator live mode shows
   up during a pitch without touching the laptop.
+
+## Simulator and packaging
+
+- **Seeding goes through `POST /api/rides`.** In-process by default (the
+  app's own TestClient, so no server is needed and the code path is the HTTP
+  one); `--url` seeds a running server. `started_at` backfill is honoured only
+  with the admin token.
+- **Ride-to-ride variation** (car load: ±3 % acceleration, ±6 % jerk, ±18 %
+  vibration) makes baselines as wide as a real lift's. Without it the
+  synthetic lift was so consistent that small wear dropped the score to 0
+  within days instead of degrading over weeks.
+- **Wear model for Lift D** (from day 15, linear to day 45): horizontal
+  vibration ×2.2, stop jerk ×1.4, more and longer post-stop bounce. Tuned so
+  the demo shows warnings around day 29, yellow for about a week, then red
+  at about 40 rather than 0.
+- **Docker:** `python:3.12-slim`, non-root user, data in a `/data` volume,
+  uvicorn with `--proxy-headers` so QR codes use the public https URL behind
+  a tunnel or ingress. `httpx` is a runtime dependency because in-process
+  seeding uses the TestClient.
+- **Kubernetes:** one replica with `Recreate` strategy, since SQLite allows a
+  single writer; scale out by switching to PostgreSQL.
+- **CI (GitHub Actions):** tests on 3.11 and 3.12, then builds the image,
+  seeds a short history inside it and checks the API and ride page. The
+  Docker files were written on a machine without Docker; CI is where they
+  are verified.

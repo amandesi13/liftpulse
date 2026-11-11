@@ -1,0 +1,6 @@
+# kubectl apply -k deploy/k8s   (after creating the "liftpulse" secret)
+# Phones need HTTPS for motion sensors: expose the service through an ingress with TLS.
+resources:
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml

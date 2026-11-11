@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t liftpulse:ci .
+      - name: Smoke test (seed a short history, then serve it)
+        run: |
+          docker volume create lp-data
+          docker run --rm -v lp-data:/data -e LIFTPULSE_ADMIN_TOKEN=ci liftpulse:ci \
+            python -m sim.simulate seed --days 3 --rides-per-day 4
+          docker run -d --name lp -p 8000:8000 -v lp-data:/data -e LIFTPULSE_ADMIN_TOKEN=ci liftpulse:ci
+          for i in $(seq 30); do curl -fs localhost:8000/healthz && break; sleep 1; done
+          curl -fs -H "X-Admin-Token: ci" localhost:8000/api/lifts | python3 -c "import json,sys; lifts=json.load(sys.stdin); print(lifts); assert len(lifts) == 4"
+          curl -fs localhost:8000/r/riverside-a | grep -q "Start ride"

@@ -1,0 +1,16 @@
+services:
+  liftpulse:
+    build: .
+    image: liftpulse:latest
+    ports:
+      - "8000:8000"
+    environment:
+      LIFTPULSE_ADMIN_TOKEN: ${LIFTPULSE_ADMIN_TOKEN:-demo}
+      # Set to the public https URL (e.g. your tunnel) so QR codes point there.
+      LIFTPULSE_PUBLIC_URL: ${LIFTPULSE_PUBLIC_URL:-}
+    volumes:
+      - liftpulse-data:/data
+    restart: unless-stopped
+
+volumes:
+  liftpulse-data:
