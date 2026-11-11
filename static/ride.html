@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>LiftPulse: check this lift</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="ride-page">
+  <main class="ride">
+    <header class="ride-head">
+      <p class="eyebrow" id="building">LiftPulse</p>
+      <h1 id="lift-name">Loading…</h1>
+      <div class="status-line" id="status">
+        <span class="dot dot-grey"></span><span id="status-text">Checking lift status…</span>
+      </div>
+    </header>
+
+    <section class="card" id="intro">
+      <h2>Help keep this lift healthy</h2>
+      <p>Tap <strong>Start ride</strong> before the doors close. <strong>Hold your phone still, or place it flat
+        on the floor, until the doors open.</strong> The recording stops by itself.</p>
+    </section>
+
+    <button class="big-button" id="start" type="button" disabled>Start ride</button>
+    <button class="ghost-button hidden" id="stop" type="button">Stop</button>
+
+    <section class="card hidden" id="recording">
+      <div class="rec-head">
+        <span class="rec-dot"></span>
+        <span id="rec-label">Recording… hold still</span>
+        <span class="rec-time" id="rec-time">0 s</span>
+      </div>
+      <canvas id="trace" width="600" height="160" aria-label="Live vertical acceleration"></canvas>
+      <p class="hint" id="rec-hint">Waiting for the lift to move.</p>
+    </section>
+
+    <section class="card hidden" id="result" aria-live="polite"></section>
+
+    <p class="error hidden" id="error" role="alert"></p>
+
+    <button class="ghost-button" id="report-open" type="button">Report a problem</button>
+
+    <section class="card hidden" id="report">
+      <h2>What's wrong?</h2>
+      <form id="report-form">
+        <div class="choices">
+          <label><input type="radio" name="category" value="stuck" required> Got stuck</label>
+          <label><input type="radio" name="category" value="shaking"> Shaking</label>
+          <label><input type="radio" name="category" value="noise"> Strange noise</label>
+          <label><input type="radio" name="category" value="door"> Door problem</label>
+          <label><input type="radio" name="category" value="not_level"> Doesn't stop level</label>
+          <label><input type="radio" name="category" value="other"> Something else</label>
+        </div>
+        <textarea name="comment" maxlength="500" rows="3" placeholder="Optional: tell us more"></textarea>
+        <button class="big-button small" type="submit">Send report</button>
+      </form>
+    </section>
+
+    <footer class="privacy">No login, no location. Only this ride's motion data and a random device id are sent.</footer>
+  </main>
+  <script src="/static/ride.js"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import logging
 import re
 import secrets
 from contextlib import asynccontextmanager
+from datetime import timezone
 from pathlib import Path
 
 import qrcode
@@ -16,10 +17,10 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import models
+from . import models, pipeline
 from .config import DEFAULT_ADMIN_TOKEN, Settings, load_settings
 from .db import Base, get_db, make_engine, make_session_factory
-from .schemas import BuildingIn, LiftIn
+from .schemas import BuildingIn, LiftIn, LiftStatusOut, ReportIn, RideIn, RideOut
 
 log = logging.getLogger("liftpulse")
 
@@ -82,6 +83,18 @@ def _public_base_url(request: Request) -> str:
     return configured or str(request.base_url).rstrip("/")
 
 
+def _is_admin(request: Request, header: str | None) -> bool:
+    expected = request.app.state.settings.admin_token
+    return header is not None and secrets.compare_digest(header.encode(), expected.encode())
+
+
+def _get_lift(db: Session, lift_id: str) -> models.Lift:
+    lift = db.get(models.Lift, lift_id)
+    if lift is None:
+        raise HTTPException(404, "lift not found")
+    return lift
+
+
 def _page(name: str) -> FileResponse:
     return FileResponse(STATIC_DIR / name, headers={"Cache-Control": "no-cache"})
 
@@ -101,6 +114,39 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/admin", include_in_schema=False)
     def admin_page() -> FileResponse:
         return _page("admin.html")
+
+    @app.get("/r/{lift_id}", include_in_schema=False)
+    def ride_page(lift_id: str) -> FileResponse:
+        return _page("ride.html")
+
+    # ---- public: resident page
+
+    @app.get("/api/lifts/{lift_id}/status", response_model=LiftStatusOut)
+    def public_status(lift_id: str, db: Session = Depends(get_db)) -> dict:
+        return pipeline.lift_status(db, _get_lift(db, lift_id))
+
+    @app.post("/api/rides", response_model=RideOut)
+    def upload_ride(
+        body: RideIn,
+        request: Request,
+        db: Session = Depends(get_db),
+        x_admin_token: str | None = Header(default=None),
+    ) -> dict:
+        lift = _get_lift(db, body.lift_id)
+        now = models.utcnow()
+        started_at = now
+        # Backdating is reserved for the simulator, which holds the admin token.
+        if body.started_at is not None and _is_admin(request, x_admin_token):
+            started_at = body.started_at.replace(tzinfo=None) if body.started_at.tzinfo is None else (
+                body.started_at.astimezone(timezone.utc).replace(tzinfo=None)
+            )
+        return pipeline.ingest_ride(db, request.app.state.settings, lift, body, started_at)
+
+    @app.post("/api/reports", status_code=201)
+    def create_report(body: ReportIn, db: Session = Depends(get_db)) -> dict:
+        lift = _get_lift(db, body.lift_id)
+        report = pipeline.add_report(db, lift, body.category, body.comment, models.utcnow())
+        return {"id": report.id, "lift_id": lift.id, "category": report.category}
 
     # ---- admin: buildings and lifts
 
