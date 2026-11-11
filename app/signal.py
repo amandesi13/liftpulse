@@ -135,18 +135,24 @@ def lowpass(x: np.ndarray, cutoff_hz: float, fs: float = FS_HZ, order: int = 4) 
 
 
 def find_still_window(acc: np.ndarray, fs: float = FS_HZ, window_s: float = GRAVITY_WINDOW_S,
-                      search_s: float = 2.0) -> tuple[int, float]:
-    """Start index and |a| standard deviation of the stillest window early in the ride.
+                      search_s: float = 2.0, still_std: float = 0.05) -> tuple[int, float]:
+    """Start index and |a| standard deviation of the window used to estimate gravity.
 
-    The first moment after tapping Start is often shaky, so instead of the
-    first 0.5 s we take the stillest 0.5 s within the first ~2 s.
+    The first window (in 0.1 s steps, within the first ~2 s) whose |a| varies
+    by less than `still_std` - the phone resting before the lift starts. Not
+    simply the stillest window: during a long constant-acceleration phase |a|
+    is just as steady, and taking that as "rest" would hide the ride. If no
+    window is still enough (the tap on Start kept shaking the phone), the
+    stillest one is returned and the caller decides.
     """
     n = max(1, int(window_s * fs))
     mag = np.linalg.norm(acc, axis=1)
     last_start = max(0, min(int(search_s * fs), len(mag) - n))
     best_i, best_sd = 0, math.inf
-    for i in range(0, last_start + 1, max(1, n // 5)):
+    for i in range(0, last_start + 1, max(1, int(0.1 * fs))):
         sd = float(np.std(mag[i:i + n]))
+        if sd < still_std:
+            return i, sd
         if sd < best_sd:
             best_i, best_sd = i, sd
     return best_i, best_sd
