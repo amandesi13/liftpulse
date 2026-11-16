@@ -12,6 +12,11 @@ health score and plain-language alerts such as
 ![Maintenance dashboard](docs/img/dashboard.png)
 
 [![CI](https://github.com/amandesi13/liftpulse/actions/workflows/ci.yml/badge.svg)](https://github.com/amandesi13/liftpulse/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688)](https://fastapi.tiangolo.com/)
+[![PostgreSQL | SQLite](https://img.shields.io/badge/db-PostgreSQL%20%7C%20SQLite-336791)](DECISIONS.md)
+[![Docker](https://img.shields.io/badge/deploy-Docker%20%7C%20k8s-2496ED)](deploy/k8s)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## How it works
 
