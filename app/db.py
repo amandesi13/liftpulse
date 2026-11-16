@@ -23,6 +23,14 @@ def make_engine(database_url: str) -> Engine:
         path = database_url.split("///", 1)[1] if "///" in database_url else ""
         if path and path != ":memory:":
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    elif database_url.startswith("postgresql"):
+        # Serverless Postgres (Neon) suspends when idle and drops connections:
+        # check each pooled connection before use. Neon's pooled endpoint is
+        # PgBouncer in transaction mode, so no server-side prepared statements.
+        kwargs["pool_pre_ping"] = True
+        kwargs["pool_recycle"] = 300
+        if database_url.startswith("postgresql+psycopg"):
+            kwargs["connect_args"] = {"prepare_threshold": None}
 
     engine = create_engine(database_url, **kwargs)
 

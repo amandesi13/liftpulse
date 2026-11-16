@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import Settings
+from app.config import Settings, normalize_database_url
+from app.db import Base, make_engine
 from app.main import create_app
 from sim.ridegen import generate_ride
 
@@ -17,10 +19,22 @@ ADMIN = {"X-Admin-Token": ADMIN_TOKEN}
 BASELINE = 6
 
 
+def database_url(tmp_path, name: str) -> str:
+    """A fresh database per test: a SQLite file, or LIFTPULSE_TEST_DATABASE_URL (PostgreSQL in CI), emptied."""
+    url = os.getenv("LIFTPULSE_TEST_DATABASE_URL")
+    if not url:
+        return f"sqlite:///{tmp_path / name}"
+    url = normalize_database_url(url)
+    engine = make_engine(url)
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+    return url
+
+
 @pytest.fixture()
 def client(tmp_path):
     settings = Settings(
-        database_url=f"sqlite:///{tmp_path / 'test.db'}",
+        database_url=database_url(tmp_path, "test.db"),
         admin_token=ADMIN_TOKEN,
         public_url="https://lifts.example.org",
     )
@@ -45,7 +59,7 @@ def lift(client):
 @pytest.fixture()
 def small(tmp_path):
     """App with a 6-ride baseline so the tests stay fast, and one lift "l2"."""
-    settings = Settings(database_url=f"sqlite:///{tmp_path / 's.db'}", admin_token=ADMIN_TOKEN,
+    settings = Settings(database_url=database_url(tmp_path, "s.db"), admin_token=ADMIN_TOKEN,
                         baseline_rides=BASELINE)
     with TestClient(create_app(settings)) as c:
         b = c.post("/api/admin/buildings", json={"name": "B"}, headers=ADMIN).json()

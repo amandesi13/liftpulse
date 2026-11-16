@@ -77,6 +77,25 @@ docker compose exec liftpulse python -m sim.simulate seed --days 45
 Kubernetes manifests are in [`deploy/k8s/`](deploy/k8s): a single-replica Deployment (SQLite), a
 Service, a PVC, and an example Secret.
 
+### Hosted (Render + Neon, free)
+
+[`render.yaml`](render.yaml) is a Render Blueprint. It builds the Dockerfile as a free web service
+and keeps the data in a free [Neon](https://neon.tech) PostgreSQL database, because Render's free
+disk is wiped on every restart.
+
+1. **Neon:** create a project and copy its pooled connection string.
+2. **Render:** choose New → Blueprint, pick this repository, and paste the connection string as
+   `DATABASE_URL`.
+3. **Admin token:** Render generates `LIFTPULSE_ADMIN_TOKEN`; find it under the service's
+   Environment.
+4. **QR codes** use Render's public URL automatically.
+
+A free Render service sleeps after 15 minutes without traffic and wakes in about 30–60 s, so open
+it once before a demo.
+
+For local development against Neon, `neon init` writes `DATABASE_URL` to `.env.local`. LiftPulse
+reads it, unless `LIFTPULSE_DATABASE_URL` is set.
+
 ### On a phone (HTTPS required)
 
 Browsers expose motion sensors only on secure (`https://`) pages, so tunnel the local server:
@@ -98,8 +117,8 @@ QR codes point to the tunnel, then print the stickers from `/admin`.
 | Variable | Default | |
 |---|---|---|
 | `LIFTPULSE_ADMIN_TOKEN` | `change-me` | Shared token for the dashboard and admin API (header `X-Admin-Token` or `?token=`). |
-| `LIFTPULSE_DATABASE_URL` | `sqlite:///./data/liftpulse.db` | Any SQLAlchemy URL; PostgreSQL works unchanged. |
-| `LIFTPULSE_PUBLIC_URL` | request URL | Base URL printed in QR codes. |
+| `LIFTPULSE_DATABASE_URL` / `DATABASE_URL` | `sqlite:///./data/liftpulse.db` | Any SQLAlchemy URL; `postgres://` URLs from Neon and other hosts are accepted as-is. Also read from `.env.local` / `.env`. |
+| `LIFTPULSE_PUBLIC_URL` | `RENDER_EXTERNAL_URL`, else the request URL | Base URL printed in QR codes. |
 | `LIFTPULSE_BASELINE_RIDES` | `20` | Valid rides per direction that form a lift's baseline. |
 | `LIFTPULSE_STORE_RAW` | `1` | Keep raw samples (needed for ride traces and re-analysis). |
 
@@ -165,7 +184,7 @@ pytest          # 82 tests, ~15 s
   rides gives grey.
 - **API flows** end to end, and the simulator.
 
-CI runs them on Python 3.11 and 3.12, then builds the Docker image and smoke-tests it.
+CI runs them on Python 3.11 and 3.12 (SQLite) and against PostgreSQL 18, then builds the Docker image and smoke-tests it.
 
 ## Project layout
 

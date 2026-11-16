@@ -7,3 +7,8 @@ data
 tests
 docs
 *.db
+node_modules
+.env*
+.neon
+neon.ts
+package*.json

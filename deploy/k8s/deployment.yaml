@@ -31,7 +31,7 @@ spec:
               value: https://liftpulse.example.com
           volumeMounts:
             - name: data
-              mountPath: /data
+              mountPath: /app/data
           readinessProbe:
             httpGet: {path: /healthz, port: 8000}
           livenessProbe:

@@ -140,3 +140,25 @@ Defaults chosen while building the MVP, and why. Each can be revisited.
   seeds a short history inside it and checks the API and ride page. The
   Docker files were written on a machine without Docker; CI is where they
   are verified.
+
+## Hosting (Render + Neon)
+
+- **Render free web service plus Neon free PostgreSQL**, because Render's
+  free disk is ephemeral and SQLite there would lose every ride on restart.
+  `render.yaml` declares the service; `DATABASE_URL` is entered in Render's
+  dashboard (`sync: false`), so the connection string is never committed.
+- **`DATABASE_URL` is read as well as `LIFTPULSE_DATABASE_URL`**, and
+  `postgres://` / `postgresql://` URLs are rewritten to SQLAlchemy's psycopg 3
+  driver, so Neon's string works unchanged. `.env.local` (written by
+  `neon init`) and `.env` are loaded for local runs, without overriding real
+  environment variables.
+- **Neon specifics:** `pool_pre_ping` and a 5-minute recycle, because Neon
+  suspends idle compute and drops connections; psycopg's automatic prepared
+  statements are off, because the pooled endpoint is PgBouncer in transaction
+  mode.
+- **The Dockerfile no longer sets a database URL.** It used to set
+  `LIFTPULSE_DATABASE_URL` to SQLite, which would have silently overridden
+  the host's `DATABASE_URL`. The container's fallback SQLite file is now in
+  the `/app/data` volume.
+- **CI runs the whole suite against PostgreSQL 18** (Neon's version), so
+  SQLite-only behaviour such as unenforced string lengths can't slip through.

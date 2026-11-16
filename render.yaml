@@ -1,0 +1,18 @@
+# Render Blueprint: one free web service built from the Dockerfile.
+# Data lives in Neon PostgreSQL (DATABASE_URL), because Render's free disk is
+# wiped on every restart or deploy.
+services:
+  - type: web
+    name: liftpulse
+    runtime: docker
+    plan: free
+    region: virginia          # next to the Neon database (AWS us-east-1)
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL     # Neon connection string; entered in the Render dashboard, never committed
+        sync: false
+      - key: LIFTPULSE_ADMIN_TOKEN
+        generateValue: true   # random token, visible under Environment in the dashboard
+      # LIFTPULSE_PUBLIC_URL is not needed: Render sets RENDER_EXTERNAL_URL.

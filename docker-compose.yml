@@ -9,7 +9,7 @@ services:
       # Set to the public https URL (e.g. your tunnel) so QR codes point there.
       LIFTPULSE_PUBLIC_URL: ${LIFTPULSE_PUBLIC_URL:-}
     volumes:
-      - liftpulse-data:/data
+      - liftpulse-data:/app/data
     restart: unless-stopped
 
 volumes:
